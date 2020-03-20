@@ -486,7 +486,9 @@
         switchClass(elements.logoutLink, displayNoneClass, hide);
     }
 
+    var currentAuthState;
     function switchAuthState(state) {
+        currentAuthState = state;
         configState(true);
         loginState(true);
         mainState(true);
@@ -532,6 +534,8 @@
                 clearTimeout(loadTimeout);
             }
 
+            if (!lastSearch.ownObj && !lastSearch.catObj && !lastSearch.text.trim()) return;
+
             waitForLoad = true;
             loadTimeout = setTimeout(function () {
                 if (shouldLoadMore(holder)) {
@@ -551,6 +555,7 @@
     }
 
     function shouldLoadMore(holder) {
+        if (currentAuthState != "main") return false;
         if (holder.scrollTop + holder.clientHeight < holder.scrollHeight) return false;
         if ((!lastSearch.ownObj || !lastSearch.ownObj.next) && (lastSearch.catObj && !lastSearch.catObj.next)) return false;
 
@@ -781,10 +786,14 @@
             keys.push(item);
         }
 
-        var formatter = new CSL.Engine({ retrieveLocale: function (id) { return locales[id]; }, retrieveItem: function (id) { return data[id]; } }, styles[selectedStyle], selectedLocale);
-        formatter.updateItems(keys);
+        try {
+            var formatter = new CSL.Engine({ retrieveLocale: function (id) { return locales[id]; }, retrieveItem: function (id) { return data[id]; } }, styles[selectedStyle], selectedLocale);
+            formatter.updateItems(keys);
 
-        insertInDocument(formatter.makeBibliography()[1]);
+            insertInDocument(formatter.makeBibliography()[1]);
+        } catch (e) {
+            showError(e);
+        }
     }
 
     function insertInDocument(html) {
