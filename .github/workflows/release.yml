@@ -1,0 +1,11 @@
+ame: Release
+
+on:
+  workflow_dispatch:
+  push:
+    tags:
+      - "v*"
+
+jobs:
+  release:
+    uses: ONLYOFFICE/plugin-youtube/.github/workflows/release.yml@master
