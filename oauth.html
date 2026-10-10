@@ -24,17 +24,35 @@
         (function () {
             function parseLocation() {
                 try {
-                    var matches = document.location.hash.match(new RegExp("access_token=([^&]*)&state=([^&]*)"));
-                    
-                    if (matches && matches[1] && matches[2]) {
-                        window.opener.OAuthCallback(matches[1], matches[2]);
-                    } else {
-                        window.opener.OAuthError("No token or state");
+                    var hash = (document.location.hash || "").replace(/^#/, "");
+                    var search = (document.location.search || "").replace(/^\?/, "");
+                    var params = {};
+
+                    var parseStr = function (str) {
+                        if (!str) return;
+                        var pairs = str.split("&");
+                        for (var i = 0; i < pairs.length; i++) {
+                            var p = pairs[i].split("=");
+                            if (p.length >= 2) {
+                                params[decodeURIComponent(p[0])] = decodeURIComponent(p.slice(1).join("="));
+                            }
+                        }
+                    };
+
+                    parseStr(search);
+                    parseStr(hash);
+
+                    var token = params["access_token"] || params["token"] || params["code"];
+                    var state = params["state"];
+
+                    if (token && window.opener && typeof window.opener.OAuthCallback === "function") {
+                        window.opener.OAuthCallback(token, state);
+                    } else if (window.opener && typeof window.opener.OAuthError === "function") {
+                        window.opener.OAuthError("No token received");
                     }
                 } finally {
-                    window.close();
+                    try { window.close(); } catch (e) {}
                 }
-            }
 
             window.onload = parseLocation;
         })();

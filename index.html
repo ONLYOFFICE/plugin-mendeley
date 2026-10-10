@@ -1,26 +1,9 @@
-﻿<!--
- (c) Copyright Ascensio System SIA 2020
-
- Licensed under the Apache License, Version 2.0 (the "License");
- you may not use this file except in compliance with the License.
- You may obtain a copy of the License at
-
-     http://www.apache.org/licenses/LICENSE-2.0
-
- Unless required by applicable law or agreed to in writing, software
- distributed under the License is distributed on an "AS IS" BASIS,
- WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- See the License for the specific language governing permissions and
- limitations under the License.
- -->
 <!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
     <title>Mendeley</title>
-    <link rel="stylesheet" href="https://fonts.googleapis.com/icon?family=Material+Icons">
     <link rel="stylesheet" href="resources/css/plugin_style.css">
-    <link rel="stylesheet" href="https://onlyoffice.github.io/sdkjs-plugins/v1/plugins.css">
     <script type="text/javascript" src="https://onlyoffice.github.io/sdkjs-plugins/v1/plugins.js"></script>
     <script type="text/javascript" src="https://onlyoffice.github.io/sdkjs-plugins/v1/plugins-ui.js"></script>
     <script src="scripts/thirdparty/fetch.umd.js"></script>
@@ -36,137 +19,295 @@
     <div id="errorWrapper" class="errorMsg display-none defaultlable"></div>
 
     <div id="content">
+        <div id="mainCont">
 
-        <div id="mainCont" class="flexCol">
-
-            <div id="configState" class="display-none">
-                <div><span class="i18n">To use Mendeley, register this editor as an app. Copy the link and insert it as Redirect URL in the form that will be opened.</span> <a target="_blank" href="https://github.com/ONLYOFFICE/plugin-mendeley/tree/master#configuration" class="link i18n">Learn more here.</a></div>
-                <input id="redirectConfig" readonly class="mrtop control text wide form-control" />
-                <div id="redirectUrlCopy" class="button wide control i18n btn-text-default">Copy Link and Open Form</div>
-                <div class="i18n">In the form, enter any application name and description, accept Terms and Conditions and generate a secret. Enter Application ID below and save it.</div>
-                <div class="mrtop label">
-                    <span class="i18n">Application ID</span>
-                    <input id="appIdField" autocomplete="off" class="control text wide i18n form-control" type="text" placeholder="Application ID" />
+            <!-- CONFIG STATE -->
+            <div id="configState" class="display-none" style="padding: 16px;">
+                <div id="autoConnectBtn" class="btn-primary" style="width: 100%; margin-bottom: 12px; background-color: #2e7d32; border-color: #2e7d32; font-weight: bold; cursor: pointer; text-align: center;">Connect to Mendeley Desktop</div>
+                <div style="font-size: 11px; text-align: center; color: var(--text-secondary); margin-bottom: 14px; border-bottom: 1px solid rgba(128,128,128,0.2); line-height: 0.1em;"><span style="background: var(--bg-surface, #fff); padding: 0 8px;">or manual configuration</span></div>
+                <div style="font-size: 12px; color: var(--text-secondary); margin-bottom: 8px;">
+                    <span>To use Mendeley, register this editor as an app. Copy the link and insert it as Redirect URL in the form that will be opened.</span>
+                    <a target="_blank" href="https://github.com/ONLYOFFICE/plugin-mendeley/tree/master#configuration" style="color: var(--brand-accent);">Learn more</a>
                 </div>
-                <div id="saveConfigBtn" class="button wide control i18n btn-text-default">Save</div>
+                <input id="redirectConfig" readonly class="app-input" style="margin-bottom: 8px;" />
+                <div id="redirectUrlCopy" class="btn-primary" style="width: 100%; margin-bottom: 12px;">Copy Link and Open Form</div>
+                <div class="form-group">
+                    <label class="form-label">Application ID</label>
+                    <input id="appIdField" autocomplete="off" class="app-input" type="text" placeholder="Enter Application ID" />
+                </div>
+                <div id="saveConfigBtn" class="btn-primary" style="width: 100%; margin-top: 12px;">Save</div>
             </div>
 
-            <div id="loginState" class="display-none">
-                <span class="i18n">This plugin help you search references by author, title or year in your own library</span>
-                <div id="loginBtn" class="button wide control i18n btn-text-default">Login</div>
-                <div id="reconfigBtn" class="button wide control i18n btn-text-default">Reconfigure</div>
+            <!-- LOGIN STATE -->
+            <div id="loginState" class="display-none" style="padding: 24px 16px; text-align: center;">
+                <div style="font-size: 13px; color: var(--text-secondary); margin-bottom: 16px;">
+                    Search references by author, title or year in your own Mendeley library
+                </div>
+                <div id="autoConnectBtnLogin" class="btn-primary" style="width: 100%; margin-bottom: 8px; background-color: #2e7d32; border-color: #2e7d32; font-weight: bold; cursor: pointer;">Connect to Mendeley Desktop</div>
+                <div id="loginBtn" class="btn-primary" style="width: 100%; margin-bottom: 8px;">Login to Mendeley (Web)</div>
+                <div id="reconfigBtn" class="btn-secondary" style="width: 100%;">Reconfigure App</div>
             </div>
 
+            <!-- SELECT COLLECTION DRAWER VIEW -->
+            <div id="collectionDrawer" class="mendeley-drawer display-none">
+                <div id="drawerBackBtn" class="drawer-header">
+                    <div class="drawer-header-left">
+                        <span class="ui-icon" style="color: var(--text-secondary);"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg></span> <span>Select Collection</span>
+                    </div>
+                </div>
+                <div id="drawerListHolder" class="flexSize" style="overflow-y: auto; padding-bottom: 20px;">
+                    <!-- Populated dynamically via JS -->
+                </div>
+            </div>
+
+            <!-- EDIT CITATION DRAWER VIEW -->
+            <div id="editCitationDrawer" class="mendeley-drawer display-none">
+                <div id="editCitationBackBtn" class="drawer-header">
+                    <div class="drawer-header-left">
+                        <span class="ui-icon" style="color: var(--text-secondary);"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg></span> <span>Edit citation</span>
+                    </div>
+                </div>
+
+                <div class="drawer-banner">
+                    <span>Currently editing: </span><b id="editCitationDocName">-</b>
+                </div>
+
+                <div style="padding: 16px; display: flex; flex-direction: column; gap: 14px; overflow-y: auto;">
+                    <!-- Live Preview Box -->
+                    <div class="preview-box">
+                        <div class="preview-box-header">Preview</div>
+                        <div id="editCitationPreviewText" class="preview-box-content" style="font-weight: 500;">-</div>
+                    </div>
+
+                    <!-- Override entire citation manually link -->
+                    <div>
+                        <span id="btnOpenOverrideManually" style="color: var(--brand-accent); font-size: 12px; cursor: pointer; font-weight: 500;">Override entire citation manually &rsaquo;</span>
+                    </div>
+
+                    <div class="form-section-title">Citation Formatting</div>
+
+                    <!-- Display as Dropdown -->
+                    <div class="form-group">
+                        <label class="form-label">Display as:</label>
+                        <select id="editDisplayAsSelect" class="app-select">
+                            <option value="default">(Author, Year)</option>
+                            <option value="narrative">Author (Year)</option>
+                            <option value="author_only">Author</option>
+                            <option value="year_only">(Year)</option>
+                        </select>
+                    </div>
+
+                    <!-- Source details (Locator) -->
+                    <div class="form-group">
+                        <label class="form-label">Source details</label>
+                        <div style="display: flex; gap: 8px;">
+                            <select id="editLocatorTypeSelect" class="app-select" style="flex: 1;">
+                                <option value="page">Page</option>
+                                <option value="chapter">Chapter</option>
+                                <option value="section">Section</option>
+                                <option value="paragraph">Paragraph</option>
+                                <option value="figure">Figure</option>
+                                <option value="table">Table</option>
+                            </select>
+                            <input id="editLocatorValueInput" type="text" placeholder="e.g. 12-15" class="app-input" style="flex: 1;" />
+                        </div>
+                    </div>
+
+                    <!-- Prefix and Suffix -->
+                    <div class="form-group">
+                        <label class="form-label">Prefix and Suffix</label>
+                        <div style="display: flex; gap: 8px;">
+                            <input id="editPrefixInput" type="text" placeholder="Prefix" class="app-input" style="flex: 1;" />
+                            <input id="editSuffixInput" type="text" placeholder="Suffix" class="app-input" style="flex: 1;" />
+                        </div>
+                    </div>
+
+                    <!-- Action Buttons -->
+                    <div style="display: flex; gap: 10px; margin-top: 10px;">
+                        <div id="saveCitationChangesBtn" class="btn-primary" style="flex: 1;">Save changes</div>
+                        <div id="cancelCitationChangesBtn" class="btn-secondary" style="flex: 1;">Cancel</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- OVERRIDE MANUALLY DRAWER VIEW -->
+            <div id="overrideManuallyDrawer" class="mendeley-drawer display-none" style="z-index: 110;">
+                <div id="overrideManuallyBackBtn" class="drawer-header">
+                    <div class="drawer-header-left">
+                        <span class="ui-icon" style="color: var(--text-secondary);"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg></span> <span>Override manually</span>
+                    </div>
+                    <span style="font-size: 12px; color: var(--brand-accent); border: 1.5px solid var(--brand-accent); border-radius: 50%; width: 16px; height: 16px; display: inline-flex; align-items: center; justify-content: center; font-weight: bold; font-family: serif;">i</span>
+                </div>
+
+                <div style="padding: 16px; display: flex; flex-direction: column; gap: 14px;">
+                    <div style="font-size: 12px; color: var(--text-secondary);">Override the entire citation below manually.</div>
+
+                    <textarea id="manualOverrideTextarea" class="app-input" rows="5" style="resize: vertical;"></textarea>
+
+                    <div id="btnRevertDefaultOverride" style="display: flex; align-items: center; gap: 6px; color: var(--text-secondary); font-size: 12px; cursor: pointer; user-select: none;">
+                        <span class="ui-icon"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/></svg></span> <span>Revert to default</span>
+                    </div>
+
+                    <div style="display: flex; gap: 10px; margin-top: 10px;">
+                        <div id="saveManualOverrideBtn" class="btn-primary" style="flex: 1; background-color: var(--brand-primary); border-color: var(--brand-primary);">Save changes</div>
+                        <div id="cancelManualOverrideBtn" class="btn-secondary" style="flex: 1;">Cancel</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- SETTINGS OVERVIEW DRAWER -->
+            <div id="settingsDrawer" class="mendeley-drawer display-none">
+                <div id="settingsDrawerBackBtn" class="drawer-header">
+                    <div class="drawer-header-left">
+                        <span class="ui-icon" style="color: var(--text-secondary);"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg></span> <span>Citation Settings</span>
+                    </div>
+                </div>
+                <div style="padding: 16px; display: flex; flex-direction: column; gap: 18px;">
+                    <!-- Section 1: Citation Style -->
+                    <div>
+                        <div class="form-section-title">Citation Style</div>
+                        <div id="settingsCurrentStyleName" style="font-size: 13px; font-weight: 700; color: var(--text-main); margin: 6px 0 8px 0;">APA Style 7th edition</div>
+                        <button id="btnOpenChangeStyle" class="btn-outline">Change citation style</button>
+                    </div>
+
+                    <!-- Section 2: Citation Language -->
+                    <div>
+                        <div class="form-section-title">Citation Language</div>
+                        <div id="settingsCurrentLangName" style="font-size: 13px; font-weight: 700; color: var(--text-main); margin: 6px 0 8px 0;">English (US)</div>
+                        <button id="btnOpenChangeLang" class="btn-outline">Change citation language</button>
+                    </div>
+
+                    <!-- Section 3: Style Preview -->
+                    <div class="preview-box">
+                        <div class="preview-box-header">Preview</div>
+                        <div id="settingsStylePreviewBox" class="preview-box-content">(Smith et al., 2021)</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- CHANGE CITATION STYLE DRAWER -->
+            <div id="changeStyleDrawer" class="mendeley-drawer display-none" style="z-index: 105;">
+                <div id="changeStyleBackBtn" class="drawer-header">
+                    <div class="drawer-header-left">
+                        <span class="ui-icon" style="color: var(--text-secondary);"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg></span> <span>Change citation style</span>
+                    </div>
+                </div>
+                <div style="padding: 8px 12px 6px;">
+                    <input id="styleSearchInput" type="text" placeholder="Search citation styles..." class="app-input" />
+                </div>
+                <div id="styleListItemsContainer" class="flexSize" style="overflow-y: auto; padding-bottom: 20px;">
+                    <!-- Style cards populated dynamically -->
+                </div>
+            </div>
+
+            <!-- CHANGE CITATION LANGUAGE DRAWER -->
+            <div id="changeLangDrawer" class="mendeley-drawer display-none" style="z-index: 105;">
+                <div id="changeLangBackBtn" class="drawer-header">
+                    <div class="drawer-header-left">
+                        <span class="ui-icon" style="color: var(--text-secondary);"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg></span> <span>Change citation language</span>
+                    </div>
+                </div>
+                <div id="langListItemsContainer" class="flexSize" style="overflow-y: auto; padding-bottom: 20px;">
+                    <!-- Lang cards populated dynamically -->
+                </div>
+            </div>
+
+            <!-- MAIN ACTIVE STATE -->
             <div id="mainState" class="flexCol flexSize display-none">
-                <div id="selectedWrapper">
-                    <div class="flexCol flexSize flexCenter">
+                <!-- 1-ROW TOP TOOLBAR -->
+                <div class="top-toolbar">
+                    <div id="collectionSelectorBtn" class="collection-pill-btn">
+                        <span id="currentCollectionLabel">All References</span>
+                        <span class="ui-icon" style="margin-left: 4px; color: var(--text-muted);"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="7 15 12 20 17 15"/><polyline points="7 9 12 4 17 9"/></svg></span>
+                    </div>
+                    <div id="topSyncBtn" class="icon-btn" title="Sync / Refresh References">
+                        <span class="ui-icon"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21.5 2v6h-6M21.34 15.57a10 10 0 1 1-.57-8.38l5.67-5.67"/></svg></span>
+                    </div>
+                    <div id="topMoreBtn" class="icon-btn" title="More options">
+                        <span class="ui-icon"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="1.5"/><circle cx="19" cy="12" r="1.5"/><circle cx="5" cy="12" r="1.5"/></svg></span>
+                    </div>
+
+                    <!-- Dropdown Menu Popup -->
+                    <div id="topMoreMenu" class="dropdown-menu-card display-none">
+                        <div id="menuItemInsertBib" class="dropdown-item">
+                            <span class="ui-icon"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></svg></span>
+                            <span>Insert Bibliography</span>
+                        </div>
+                        <div id="menuItemCitationSettings" class="dropdown-item">
+                            <span class="ui-icon"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg></span>
+                            <span>Citation Settings</span>
+                        </div>
+                        <div id="menuItemUnlinkCitations" class="dropdown-item">
+                            <span class="ui-icon"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/><line x1="2" y1="2" x2="22" y2="22"/></svg></span>
+                            <span>Unlink Citations</span>
+                        </div>
+                        <div class="dropdown-divider"></div>
+                        <div id="menuItemLogout" class="dropdown-item danger">
+                            <span class="ui-icon"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg></span>
+                            <span>Logout</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Search Bar -->
+                <div class="search-wrapper">
+                    <input id="searchField" autocomplete="off" class="search-input" type="text" placeholder="Search references by author, title or year" />
+                    <span id="searchClear" class="search-clear-btn display-none">&#xd7;</span>
+                </div>
+
+                <!-- References List -->
+                <div id="docsWrapper">
+                    <div id="docsHolder"></div>
+                    <div style="padding: 10px; display: flex; justify-content: center;">
+                        <div id="libLoader" class="cssload-loading display-none"><i></i><i></i><i></i><i></i></div>
+                    </div>
+                </div>
+
+                <!-- BOTTOM DOCK BAR -->
+                <div id="controlsHolder">
+                    <div id="selectedWrapper" class="display-none">
                         <div id="selectedHolder"></div>
+                        <div id="selectedThumb" class="scrollThumb display-none"></div>
                     </div>
-                    <div id="selectedThumb" class="scrollThumb display-none"></div>
-                </div>
-                <label id="searchLabel">
-                    <input id="searchField" autocomplete="off" class="control text i18n form-control" type="text" placeholder="Search references by author, title or year" />
-                    <span id="searchClear" class="display-none">&#xd7;</span>
-                </label>
-                <div id="docsWrapper" class="flexSize">
-                    <div class="flexCol flexSize">
-                        <div id="docsHolder" class="flexCol"></div>
-                        <div class="flex flexCenter">
-                            <div id="libLoader" class="cssload-loading display-none"><i></i><i></i><i></i><i></i></div>
-                        </div>
+                    <div id="buttonsWrapper">
+                        <div id="insertLinkBtn" class="btn-primary" style="flex: 1; padding: 9px 12px; font-weight: 600;">Insert Citation</div>
+                        <div id="cancelBtn" class="btn-secondary" style="flex: 1; padding: 9px 12px;">Discard</div>
                     </div>
-                    <div id="docsThumb" class="scrollThumb display-none"></div>
-                </div>
-                <div id="controlsHolder" class="flexCol">
-                    <div id="buttonsWrapper" class="flex display-none">
-                        <div id="insertBibBtn" class="button control i18n btn-text-default">Insert Bibliography</div>
-                        <div id="insertLinkBtn" class="button control i18n btn-text-default">Insert Link</div>
-                        <div id="cancelBtn" class="button control i18n btn-text-default">Cancel</div>
-                    </div>
-                    <div id="styleWrapper">
-                        <div class="label">
-                            <span class="defaultlable">Style</span>
-                            <div class="selectHolder">
-                                <input id="styleSelect" class="control select form-control" type="text" placeholder="Enter style name">
-                                <div id="styleSelectList" class="selectList display-none form-control">
-                                </div>
-                                <div id="styleSelectedListOther" class="selectList display-none form-control"></div>
-                            </div>
-                        </div>
-                        <div class="label">
-                            <span class="defaultlable">Language</span>
-                            <div class="selectHolder">
-                                <input id="styleLang" readonly class="control select form-control" type="text">
-                                <div id="styleLangList" class="selectList display-none form-control">
-                                    <span data-value="af-ZA">Afrikaans</span>
-                                    <span data-value="ar">Arabic</span>
-                                    <span data-value="bg-BG">Bulgarian</span>
-                                    <span data-value="ca-AD">Catalan</span>
-                                    <span data-value="cs-CZ">Czech</span>
-                                    <span data-value="cy-GB">Welsh</span>
-                                    <span data-value="da-DK">Danish</span>
-                                    <span data-value="de-AT">German (Austria)</span>
-                                    <span data-value="de-CH">German (Switzerland)</span>
-                                    <span data-value="de-DE">German (Germany)</span>
-                                    <span data-value="el-GR">Greek</span>
-                                    <span data-value="en-GB">English (UK)</span>
-                                    <span selected data-value="en-US">English (US)</span>
-                                    <span data-value="es-CL">Spanish (Chile)</span>
-                                    <span data-value="es-ES">Spanish (Spain)</span>
-                                    <span data-value="es-MX">Spanish (Mexico)</span>
-                                    <span data-value="et-EE">Estonian</span>
-                                    <span data-value="eu">Basque</span>
-                                    <span data-value="fa-IR">Persian</span>
-                                    <span data-value="fi-FI">Finnish</span>
-                                    <span data-value="fr-CA">French (Canada)</span>
-                                    <span data-value="fr-FR">French (France)</span>
-                                    <span data-value="he-IL">Hebrew</span>
-                                    <span data-value="hr-HR">Croatian</span>
-                                    <span data-value="hu-HU">Hungarian</span>
-                                    <span data-value="id-ID">Indonesian</span>
-                                    <span data-value="is-IS">Icelandic</span>
-                                    <span data-value="it-IT">Italian</span>
-                                    <span data-value="ja-JP">Japanese</span>
-                                    <span data-value="km-KH">Khmer</span>
-                                    <span data-value="ko-KR">Korean</span>
-                                    <span data-value="la">Latin</span>
-                                    <span data-value="lt-LT">Lithuanian</span>
-                                    <span data-value="lv-LV">Latvian</span>
-                                    <span data-value="mn-MN">Mongolian</span>
-                                    <span data-value="nb-NO">Norwegian (Bokmål)</span>
-                                    <span data-value="nl-NL">Dutch</span>
-                                    <span data-value="nn-NO">Norwegian (Nynorsk)</span>
-                                    <span data-value="pl-PL">Polish</span>
-                                    <span data-value="pt-BR">Portuguese (Brazil)</span>
-                                    <span data-value="pt-PT">Portuguese (Portugal)</span>
-                                    <span data-value="ro-RO">Romanian</span>
-                                    <span data-value="ru-RU">Russian</span>
-                                    <span data-value="sk-SK">Slovak</span>
-                                    <span data-value="sl-SI">Slovenian</span>
-                                    <span data-value="sr-RS">Serbian</span>
-                                    <span data-value="sv-SE">Swedish</span>
-                                    <span data-value="th-TH">Thai</span>
-                                    <span data-value="tr-TR">Turkish</span>
-                                    <span data-value="uk-UA">Ukrainian</span>
-                                    <span data-value="vi-VN">Vietnamese</span>
-                                    <span data-value="zh-CN">Chinese (PRC)</span>
-                                    <span data-value="zh-TW">Chinese (Taiwan)</span>
-                                </div>
-                            </div>
-                        </div>
+                    <!-- Hidden compatibility wrapper -->
+                    <div id="styleWrapper" class="display-none" style="display: none !important;">
+                        <input id="styleSelect" type="text">
+                        <div id="styleSelectList" class="display-none"></div>
+                        <div id="styleSelectedListOther" class="display-none"></div>
+                        <input id="styleLang" readonly type="text">
+                        <div id="styleLangList" class="display-none"></div>
                     </div>
                 </div>
+
             </div>
 
         </div>
-
-        <div id="footerCont">
-            <span><a href="https://mendeley.com/" target="_blank" class="link i18n">Open Mendeley website</a></span>
-            <span id="logoutLink" class="link display-none i18n defaultlable">Logout</span>
-        </div>
-
     </div>
 
+    <script src="scripts/docbuilder-helper.js"></script>
+    <script src="scripts/document.js"></script>
+    <script src="scripts/logger.js"></script>
+    <script src="scripts/constants.js"></script>
+    <script src="scripts/store.js"></script>
+    <script src="scripts/helpers.js"></script>
+    <script src="scripts/csl-converter.js"></script>
+    <script src="scripts/csl-loader.js"></script>
+    <script src="scripts/auth.js"></script>
+    <script src="scripts/ui-controls.js"></script>
+    <script src="scripts/doc-card.js"></script>
+    <script src="scripts/citation-selection.js"></script>
+    <script src="scripts/citation-insert.js"></script>
+    <script src="scripts/citation-parser.js"></script>
+    <script src="scripts/citation-sync.js"></script>
+    <script src="scripts/styles-inventory.js"></script>
+    <script src="scripts/settings-drawer.js"></script>
+    <script src="scripts/collection-drawer.js"></script>
+    <script src="scripts/library-view.js"></script>
+    <script src="scripts/events.js"></script>
     <script src="scripts/code.js"></script>
 </body>
 </html>

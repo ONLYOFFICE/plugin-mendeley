@@ -1,0 +1,192 @@
+name: Build Mendeley installers
+
+on:
+  workflow_dispatch:
+  push:
+    tags:
+      - "v*"
+
+jobs:
+  linux:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - runner: ubuntu-24.04
+            arch: amd64
+          - runner: ubuntu-24.04-arm
+            arch: arm64
+    runs-on: ${{ matrix.runner }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+      - run: cargo build --locked --release
+      - run: cargo test --locked
+      - name: Stage plugin payload
+        run: |
+          mkdir -p dist/package/plugin dist/package/bin dist/package/packaging/linux
+          cp -R index.html oauth.html config.json scripts resources translations vendor licenses dist/package/plugin/
+          rm -f dist/package/plugin/scripts/mendeley-loopback-server.py
+          cp target/release/mendeley-loopback-server dist/package/bin/
+          cp packaging/linux/install-user.sh packaging/linux/uninstall-user.sh dist/package/packaging/linux/
+          chmod +x dist/package/bin/mendeley-loopback-server dist/package/packaging/linux/*.sh
+      - name: Verify Linux installer
+        env:
+          MENDELEY_HELPER_BIN: target/release/mendeley-loopback-server
+        run: bash tests/linux-installer.test.sh
+      - name: Install nfpm
+        run: |
+          go install github.com/goreleaser/nfpm/v2/cmd/nfpm@latest
+          echo "$(go env GOPATH)/bin" >> "$GITHUB_PATH"
+      - name: Build Debian and RPM packages
+        env:
+          VERSION: 1.1.5
+          NFPM_ARCH: ${{ matrix.arch }}
+          STAGE: dist/package
+        run: |
+          nfpm package --config packaging/linux/nfpm.yaml --packager deb --target dist/
+          nfpm package --config packaging/linux/nfpm.yaml --packager rpm --target dist/
+      - uses: actions/upload-artifact@v4
+        with:
+          name: linux-${{ matrix.arch }}
+          path: |
+            dist/*.deb
+            dist/*.rpm
+
+  linux-installer-binaries:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - runner: ubuntu-24.04
+            rust-arch: x86_64
+          - runner: ubuntu-24.04-arm
+            rust-arch: aarch64
+    runs-on: ${{ matrix.runner }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+      - run: cargo build --locked --release
+      - run: |
+          mkdir -p "dist/bin/${{ matrix.rust-arch }}"
+          cp target/release/mendeley-loopback-server "dist/bin/${{ matrix.rust-arch }}/"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: linux-installer-bin-${{ matrix.rust-arch }}
+          path: dist/bin/${{ matrix.rust-arch }}/
+
+  windows:
+    if: github.event_name != 'push'
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - runner: windows-latest
+            arch: x64
+            rust-target: x86_64-pc-windows-msvc
+          - runner: windows-11-arm
+            arch: arm64
+            rust-target: aarch64-pc-windows-msvc
+    runs-on: ${{ matrix.runner }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: ${{ matrix.rust-target }}
+      - run: cargo build --locked --release --target ${{ matrix.rust-target }}
+      - shell: pwsh
+        run: |
+          $helper = "target/${{ matrix.rust-target }}/release/mendeley-loopback-server.exe"
+          if (-not (Test-Path $helper -PathType Leaf)) { throw "Rust helper missing: $helper" }
+          New-Item -ItemType Directory -Force dist/plugin | Out-Null
+          Copy-Item index.html,oauth.html,config.json,scripts,resources,translations,vendor,licenses dist/plugin -Recurse
+          New-Item -ItemType Directory -Force dist/windows | Out-Null
+          Copy-Item $helper "dist/windows/mendeley-loopback-server.exe"
+      - run: choco install innosetup --yes --no-progress
+      - shell: pwsh
+        run: iscc /DArch=${{ matrix.arch }} packaging/windows/mendeley.iss
+      - name: Verify Windows installer and helper lifecycle
+        shell: pwsh
+        run: ./tests/windows-installer.test.ps1
+      - uses: actions/upload-artifact@v4
+        with:
+          name: windows-${{ matrix.arch }}
+          path: dist/installers/*.exe
+
+  plugin:
+    needs: linux-installer-binaries
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/download-artifact@v4
+        with:
+          name: linux-installer-bin-x86_64
+          path: dist/bin/x86_64
+      - uses: actions/download-artifact@v4
+        with:
+          name: linux-installer-bin-aarch64
+          path: dist/bin/aarch64
+      - run: chmod +x dist/bin/*/mendeley-loopback-server
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Build ONLYOFFICE plugin
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          from zipfile import ZIP_DEFLATED, ZipFile
+
+          Path("dist").mkdir(exist_ok=True)
+          roots = ("config.json", "index.html", "oauth.html", "scripts", "resources", "translations", "vendor", "licenses")
+          with ZipFile("dist/mendeley.plugin", "w", compression=ZIP_DEFLATED) as archive:
+              for name in roots:
+                  root = Path(name)
+                  paths = [root] if root.is_file() else sorted(path for path in root.rglob("*") if path.is_file())
+                  for path in paths:
+                      relative = path.as_posix()
+                      if relative != "scripts/mendeley-loopback-server.py":
+                          archive.write(path, relative)
+          PY
+      - uses: actions/upload-artifact@v4
+        with:
+          name: plugin
+          path: dist/mendeley.plugin
+
+      - name: Build Linux one-step installer
+        run: |
+          mkdir -p dist bin
+          cp -R dist/bin/* bin/
+          test -x bin/x86_64/mendeley-loopback-server
+          test -x bin/aarch64/mendeley-loopback-server
+          tar --exclude='__pycache__' --exclude='*.pyc' \
+            --exclude='scripts/mendeley-loopback-server.py' \
+            -czf dist/mendeley-linux-installer.tar.gz \
+            install.sh bin config.json index.html oauth.html scripts resources translations vendor licenses
+      - name: Verify Linux installer archive
+        env:
+          MENDELEY_HELPER_BIN: bin/x86_64/mendeley-loopback-server
+          MENDELEY_INSTALLER_ARCHIVE: dist/mendeley-linux-installer.tar.gz
+        run: bash tests/linux-installer.test.sh
+      - uses: actions/upload-artifact@v4
+        with:
+          name: linux-installer
+          path: dist/mendeley-linux-installer.tar.gz
+
+  release:
+    if: startsWith(github.ref, 'refs/tags/v')
+    needs: [linux, plugin]
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          path: release
+          merge-multiple: true
+      - uses: softprops/action-gh-release@v2
+        with:
+          name: Mendeley ${{ github.ref_name }}
+          generate_release_notes: true
+          files: |
+            release/mendeley.plugin
+            release/mendeley-linux-installer.tar.gz
